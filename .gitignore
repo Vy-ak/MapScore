@@ -1,0 +1,62 @@
+# 1. DEPENDENCIES 
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# 2. ENV
+.env
+.env.*
+!.env.example
+!.env.template
+
+# 3. BUILD OUTPUTS 
+dist/
+dist-ssr/
+build/
+out/
+.nest/
+
+# 4. LOGS & TESTING
+logs/
+*.log
+coverage/
+.nyc_output/
+
+# 5. OS & EDITOR FILES
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editors 
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 6. DATABASE
+
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# 7. CACHE & MISC
+.eslintcache
+.npm/
+.yarn/cache/
+.vite/
