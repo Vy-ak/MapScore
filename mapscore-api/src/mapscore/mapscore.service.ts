@@ -140,6 +140,16 @@ export class MapscoreService {
 
       // 4. Simpan ke Database
       const safeCat = Array.isArray(targetBusiness.type) ? targetBusiness.type[0] : (targetBusiness.type || 'Bisnis Lokal');
+
+      await this.prisma.user.upsert({
+        where: { id: userId },
+        update: {},
+        create: {
+          id: userId,
+          email: userId === 'dev-user' ? 'admin@mapscore.app' : `${userId}@test.com`,
+          name: userId === 'dev-user' ? 'Developer Admin' : 'Test User',
+        },
+      });
       
       const business = await this.prisma.business.create({
         data: {
@@ -162,9 +172,7 @@ export class MapscoreService {
     }
   }
 
-  // ==========================================
-  // FUNGSI PROFIL: TARIK LIST BISNIS USER
-  // ==========================================
+  // TARIK LIST BISNIS USER
   async getUserBusinesses(userId: string) {
     return this.prisma.business.findMany({
       where: { userId },
@@ -173,9 +181,7 @@ export class MapscoreService {
     });
   }
 
-  // ==========================================
-  // FUNGSI PROFIL: HAPUS BISNIS
-  // ==========================================
+  // HAPUS BISNIS
   async deleteBusiness(userId: string, businessId: string) {
     try {
       const biz = await this.prisma.business.findFirst({ where: { id: businessId, userId } });

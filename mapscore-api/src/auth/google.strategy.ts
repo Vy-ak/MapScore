@@ -17,13 +17,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   async validate(accessToken: string, refreshToken: string, profile: any, done: VerifyCallback): Promise<any> {
     const { id, emails, displayName } = profile;
     const email = emails[0].value;
-
-    // Cek apakah user sudah pernah mendaftar sebelumnya
+    
     let user = await this.prisma.user.findUnique({ 
       where: { email: email } 
     });
 
-    // Jika belum ada, buat user baru di database
     if (!user) {
       user = await this.prisma.user.create({
         data: { 

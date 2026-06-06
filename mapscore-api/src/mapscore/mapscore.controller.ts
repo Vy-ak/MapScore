@@ -21,7 +21,6 @@ export class MapscoreController {
     return { success: true, businesses: data };
   }
 
-  // ENDPOINT BARU: DELETE
   @Delete(':id')
   async remove(@Param('id') id: string, @Query('userId') userId: string) {
     return this.mapscoreService.deleteBusiness(userId, id);

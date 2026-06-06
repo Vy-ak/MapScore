@@ -9,6 +9,7 @@ export default function App() {
     "dashboard" | "checklist" | "leaderboard" | "profile" | "search"
   >("search");
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [businessName, setBusinessName] = useState("");
   const [location, setLocation] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -17,8 +18,11 @@ export default function App() {
 
   const [completedTaskIds, setCompletedTaskIds] = useState<number[]>([]);
   const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
+  const [chartTimeRange, setChartTimeRange] = useState<
+    "day" | "week" | "month"
+  >("month");
 
-  // LOGIKA API & AUTHENTICATION
+  // API & AUTHENTICATION
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const userId = params.get("userId");
@@ -196,13 +200,16 @@ export default function App() {
       ]
         .sort((a, b) => b.score - a.score)
         .map((c, i) => ({ ...c, rank: i + 1 }));
-
       setDashboardData({ business: biz, competitors: mockComps });
     }
   };
 
   const handleDeleteBusiness = async (bid: string) => {
-    if (!confirm("Tindakan ini tidak bisa dibatalkan. Hapus bisnis ini?"))
+    if (
+      !confirm(
+        "Are you sure you want to delete this business? This action cannot be undone."
+      )
+    )
       return;
     try {
       const res = await fetch(
@@ -218,7 +225,7 @@ export default function App() {
         }
       }
     } catch (err) {
-      alert("Gagal menghapus bisnis.");
+      alert("Failed to delete business.");
     }
   };
 
@@ -231,56 +238,162 @@ export default function App() {
   };
 
   const generateShortTitle = (desc: string) => {
+    if (!desc) return "Tugas Baru";
     const words = desc.split(" ");
     if (words.length <= 6) return desc;
     return words.slice(0, 6).join(" ") + "...";
   };
 
-  // LAYAR LOGIN
+  // MATRIKS PENILAIAN & TO-DO LIST
+  let matrix: any[] = [];
+  let dynamicTasks: any[] = [];
+  let totalScore = 0;
+
+  if (dashboardData && dashboardData.business) {
+    const biz = dashboardData.business;
+    totalScore = biz.scoreHistory?.[0]?.score || 0;
+    const rating = biz.rating || biz.avgRating || 0;
+    const reviews = biz.reviews || biz.totalReviews || 0;
+
+    let s1 = Math.min(Math.round((rating / 5) * 40), 40);
+    let s2 = Math.min(Math.round((reviews / 150) * 30), 30);
+    let s3 = 15; // Max 15
+    let s4 = totalScore - (s1 + s2 + s3);
+
+    if (s4 < 0) {
+      s3 += s4;
+      s4 = 0;
+      if (s3 < 0) {
+        s2 += s3;
+        s3 = 0;
+      }
+    }
+    if (s4 > 15) {
+      const excess = s4 - 15;
+      s4 = 15;
+      s3 = Math.min(s3 + excess, 15);
+    }
+
+    matrix = [
+      {
+        id: 1,
+        name: "Kualitas Ulasan (Rating Bintang)",
+        score: s1,
+        max: 40,
+        task: "Tingkatkan rata-rata rating dengan meminta pelanggan yang puas untuk memberikan ulasan bintang 5.",
+      },
+      {
+        id: 2,
+        name: "Kuantitas Ulasan (Jumlah Review)",
+        score: s2,
+        max: 30,
+        task: "Buat program promo (misal: diskon 5%) khusus untuk pelanggan yang mau meninggalkan ulasan di Google Maps hari ini.",
+      },
+      {
+        id: 3,
+        name: "Kelengkapan Profil (Foto & Info)",
+        score: s3,
+        max: 15,
+        task: "Unggah 3 foto produk/suasana terbaru dan pastikan jam operasional serta nomor telepon sudah akurat.",
+      },
+      {
+        id: 4,
+        name: "Responsivitas & Aktivitas",
+        score: s4,
+        max: 15,
+        task: "Luangkan waktu 10 menit untuk membalas ulasan pelanggan (baik positif maupun negatif) yang belum terjawab minggu ini.",
+      },
+    ];
+
+    dynamicTasks = matrix
+      .filter((m) => m.score < m.max)
+      .map((m) => ({
+        description: m.task,
+        impactScore: m.max - m.score,
+        aspect: m.name,
+      }))
+      .sort((a, b) => b.impactScore - a.impactScore);
+
+    if (dynamicTasks.length === 0) {
+      dynamicTasks.push({
+        description:
+          "Pertahankan performa luar biasa Anda dengan rutin memonitor profil secara berkala.",
+        impactScore: 1,
+        aspect: "Pemeliharaan Performa",
+      });
+    }
+  }
+
+  // Helpers Profile
+  const getTopBusiness = () => {
+    if (myBusinesses.length === 0) return null;
+    return [...myBusinesses].sort(
+      (a, b) =>
+        (b.scoreHistory?.[0]?.score || 0) - (a.scoreHistory?.[0]?.score || 0)
+    )[0];
+  };
+  const getChartData = () => {
+    if (chartTimeRange === "day") return [40, 42, 45, 45, 50, 52, 55];
+    if (chartTimeRange === "week") return [30, 45, 52, 55];
+    return [20, 25, 30, 35, 42, 45, 48, 50, 52, 55, 60, 65];
+  };
+  const getChartLabels = () => {
+    if (chartTimeRange === "day")
+      return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    if (chartTimeRange === "week") return ["Wk1", "Wk2", "Wk3", "Wk4"];
+    return [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+  };
+
+  // LOGIN SCREEN
   if (!user) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#121416] relative overflow-hidden px-6 font-sans text-[#e2e2e5]">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#e9c77e]/5 rounded-full blur-[120px] pointer-events-none"></div>
-
-        <div className="relative z-10 w-full max-w-md bg-[#1E2124] border border-[#4d4639]/50 p-10 rounded-2xl shadow-2xl flex flex-col items-center text-center">
-          <div className="w-16 h-16 bg-[#e9c77e]/20 rounded-full flex items-center justify-center mb-6 border border-[#e9c77e]/30">
-            <span className="material-symbols-outlined text-[#e9c77e] text-4xl">
-              map
+      <main className="min-h-screen flex items-center justify-center bg-slate-900 px-4 font-sans text-slate-100">
+        <div className="bg-slate-800 p-8 rounded-2xl shadow-xl max-w-sm w-full border border-slate-700 text-center">
+          <div className="w-14 h-14 bg-blue-600/20 rounded-full flex items-center justify-center mx-auto mb-5">
+            <span className="material-symbols-outlined text-blue-400 text-3xl">
+              storefront
             </span>
           </div>
-
-          <h1
-            className="text-4xl font-bold mb-2 tracking-tight text-[#e9c77e]"
-            style={{ fontFamily: "Hanken Grotesk, sans-serif" }}
-          >
+          <h1 className="text-2xl font-extrabold mb-2 text-white tracking-tight">
             MapScore
           </h1>
-          <p className="text-[#d0c5b4] mb-10 text-sm">
-            Premium Local Analytics
+          <p className="text-slate-400 mb-8 text-sm">
+            Understand and grow your local business visibility.
           </p>
-
-          <div className="w-full space-y-4">
+          <div className="space-y-3">
             <a
               href="http://localhost:3000/auth/google"
-              className="w-full flex items-center justify-center gap-3 bg-white text-black font-semibold py-3 px-6 rounded-lg hover:bg-gray-200 transition-colors"
+              className="w-full flex items-center justify-center gap-2 bg-white text-slate-900 font-bold text-sm py-2.5 px-4 rounded-lg hover:bg-slate-200 transition-colors shadow-sm"
             >
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
                 alt="Google"
-                className="w-5 h-5"
+                className="w-4 h-4"
               />
               Sign in with Google
             </a>
-
             <button
               onClick={() =>
                 setUser({
                   id: "dev-user",
-                  name: "Verdy Akbar",
-                  email: "verdy@binus.ac.id",
+                  name: "Developer Admin",
+                  email: "admin@mapscore.app",
                 })
               }
-              className="w-full flex items-center justify-center gap-2 bg-transparent border border-[#4d4639] text-[#d0c5b4] font-semibold py-3 px-6 rounded-lg hover:bg-[#333537] hover:text-white transition-colors"
+              className="w-full flex items-center justify-center gap-2 bg-transparent border border-slate-600 text-slate-300 font-semibold text-sm py-2.5 px-4 rounded-lg hover:bg-slate-700 hover:text-white transition-colors"
             >
               <span className="material-symbols-outlined text-[18px]">
                 code
@@ -293,213 +406,224 @@ export default function App() {
     );
   }
 
-  // LAYAR LOADING
+  // LOADING SCREEN
   if (isAnalyzing)
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#121416] text-[#e2e2e5]">
-        <div className="relative w-20 h-20 mb-8">
-          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#e9c77e] border-r-[#e9c77e] animate-spin"></div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[#e9c77e] text-3xl animate-pulse">
-              auto_awesome
-            </span>
-          </div>
-        </div>
-        <h3
-          className="text-2xl font-bold mb-2"
-          style={{ fontFamily: "Hanken Grotesk, sans-serif" }}
-        >
-          Processing Data...
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-slate-100 px-6 text-center font-sans">
+        <span className="material-symbols-outlined text-blue-500 text-4xl animate-spin mb-4">
+          autorenew
+        </span>
+        <h3 className="text-xl font-bold mb-2 text-white">
+          Analyzing Your Business...
         </h3>
-        <p className="text-[#d0c5b4]">Compiling your local map snapshot.</p>
+        <p className="text-slate-400 text-sm max-w-sm">
+          Please wait a moment while we gather data from Google Maps.
+        </p>
       </div>
     );
 
-  // APLIKASI UTAMA
+  // MAIN APPLICATION
+  const topBusiness = getTopBusiness();
+  const chartData = getChartData();
+  const chartLabels = getChartLabels();
+  const maxChartValue = Math.max(...chartData, 100);
+
   return (
-    <div
-      className="bg-[#121416] text-[#e2e2e5] min-h-screen flex flex-col md:flex-row"
-      style={{ fontFamily: "Inter, sans-serif" }}
-    >
-      {/* --- SIDEBAR DESKTOP --- */}
-      <nav className="hidden md:flex flex-col fixed left-0 top-0 h-screen w-64 z-40 bg-[#1e2022] border-r border-[#4d4639]/30 shadow-lg transition-all duration-300 ease-in-out">
-        <div className="p-8 border-b border-[#4d4639]/30 flex items-center gap-4">
+    <div className="bg-slate-900 text-slate-200 min-h-screen flex flex-col md:flex-row font-sans">
+      {/* --- DESKTOP SIDEBAR --- */}
+      <nav
+        className={`hidden md:flex flex-col fixed left-0 top-0 h-screen z-40 bg-slate-950 border-r border-slate-800 shadow-xl transition-all duration-300 ease-in-out ${
+          isSidebarOpen ? "w-56" : "w-16"
+        }`}
+      >
+        <div className="p-4 border-b border-slate-800 flex items-center justify-center h-[60px]">
           <div
-            className="w-10 h-10 rounded-full bg-[#e9c77e]/20 flex items-center justify-center text-[#e9c77e] font-bold text-xl"
-            style={{ fontFamily: "Hanken Grotesk" }}
+            className={`flex items-center w-full ${
+              isSidebarOpen ? "gap-3" : "justify-center"
+            }`}
           >
-            M
-          </div>
-          <div>
-            <h1
-              className="font-bold text-xl text-[#e9c77e]"
-              style={{ fontFamily: "Hanken Grotesk" }}
-            >
-              MapScore
-            </h1>
-            <p className="text-[12px] font-medium text-[#d0c5b4]">
-              Premium Analytics
-            </p>
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex-shrink-0 flex items-center justify-center text-white font-bold text-sm shadow-md">
+              M
+            </div>
+            {isSidebarOpen && (
+              <div className="overflow-hidden whitespace-nowrap">
+                <h1 className="font-bold text-base text-white leading-tight">
+                  MapScore
+                </h1>
+                <p className="text-[10px] font-medium text-slate-400">
+                  Local Analytics
+                </p>
+              </div>
+            )}
           </div>
         </div>
-        <ul className="flex flex-col py-6 flex-grow gap-2 px-4">
+
+        <ul className="flex flex-col py-4 flex-grow gap-1.5 px-3">
           {["dashboard", "leaderboard", "checklist", "profile", "search"].map(
             (t: any) => {
               const isActive = activeTab === t;
               const labels: any = {
-                dashboard: "Dashboard",
-                leaderboard: "Leaderboard",
-                checklist: "Checklist",
-                profile: "Profile Hub",
+                dashboard: "My Dashboard",
+                leaderboard: "Competitor Rank",
+                checklist: "To-Do List",
+                profile: "My Profile",
                 search: "Add Business",
               };
               const icons: any = {
-                dashboard: "dashboard",
-                leaderboard: "emoji_events",
-                checklist: "task_alt",
-                profile: "person",
-                search: "add_circle",
+                dashboard: "insights",
+                leaderboard: "format_list_numbered",
+                checklist: "checklist",
+                profile: "account_circle",
+                search: "search",
               };
               return (
                 <li key={t}>
                   <button
                     onClick={() => setActiveTab(t)}
-                    className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg font-medium transition-all duration-200 
-                    ${
+                    title={labels[t]}
+                    className={`w-full flex items-center ${
+                      isSidebarOpen
+                        ? "justify-start px-3"
+                        : "justify-center px-0"
+                    } py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
                       isActive
-                        ? "text-[#73d9b5] border-l-4 border-[#73d9b5] bg-[#73d9b5]/10"
-                        : "text-[#d0c5b4] hover:bg-[#333537] hover:text-[#e2e2e5]"
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[20px]">
+                    <span className="material-symbols-outlined text-[20px] flex-shrink-0">
                       {icons[t]}
                     </span>
-                    {labels[t]}
+                    {isSidebarOpen && (
+                      <span className="ml-3 truncate">{labels[t]}</span>
+                    )}
                   </button>
                 </li>
               );
             }
           )}
         </ul>
-        <div className="p-6 border-t border-[#4d4639]/30">
+
+        <div className="p-3 border-t border-slate-800">
           <button
             onClick={() => {
               setUser(null);
               setDashboardData(null);
             }}
-            className="w-full flex items-center gap-3 text-red-400 hover:text-red-300 font-medium px-4 py-2"
+            title="Sign Out"
+            className={`w-full flex items-center ${
+              isSidebarOpen ? "justify-start px-3" : "justify-center px-0"
+            } gap-3 hover:bg-red-500/20 text-slate-400 hover:text-red-400 font-semibold text-sm py-2.5 rounded-lg transition-colors`}
           >
-            <span className="material-symbols-outlined text-[20px]">
+            <span className="material-symbols-outlined text-[20px] flex-shrink-0">
               logout
-            </span>{" "}
-            Logout
+            </span>
+            {isSidebarOpen && <span className="truncate">Sign Out</span>}
           </button>
         </div>
       </nav>
 
-      {/* --- KONTEN UTAMA --- */}
-      <main className="flex-grow md:ml-64 flex flex-col pb-24 md:pb-0">
-        {/* HEADER */}
-        <header className="bg-[#1e2022] md:bg-transparent shadow-sm md:shadow-none sticky top-0 z-30 flex justify-between items-center w-full px-6 md:px-12 py-4 mx-auto border-b md:border-none border-[#4d4639]/30">
-          <div className="md:hidden flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-full bg-[#e9c77e]/20 flex items-center justify-center text-[#e9c77e] font-bold text-lg"
-              style={{ fontFamily: "Hanken Grotesk" }}
+      {/* --- MAIN CONTENT AREA --- */}
+      <main
+        className={`flex-grow flex flex-col pb-20 md:pb-0 transition-all duration-300 ease-in-out ${
+          isSidebarOpen ? "md:ml-56" : "md:ml-16"
+        }`}
+      >
+        <header className="bg-slate-950 md:bg-slate-900/50 shadow-sm md:shadow-none sticky top-0 z-30 flex justify-between items-center w-full px-4 sm:px-6 py-3 border-b border-slate-800 h-[60px] backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="hidden md:flex text-slate-400 hover:text-white transition-colors"
             >
+              <span className="material-symbols-outlined text-[24px]">
+                menu
+              </span>
+            </button>
+            <div className="md:hidden w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
               M
             </div>
-            <h1
-              className="font-bold text-lg text-[#e9c77e]"
-              style={{ fontFamily: "Hanken Grotesk" }}
-            >
+            <h1 className="md:hidden font-bold text-base text-white">
               MapScore
             </h1>
           </div>
-          <div className="hidden md:block"></div>
-          <div className="flex items-center gap-6">
-            <button className="text-[#e9c77e] hover:text-[#73d9b5] transition-colors duration-200 cursor-pointer">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
+          <div className="flex items-center gap-4">
             <div
               onClick={() => setActiveTab("profile")}
-              className="w-10 h-10 rounded-full border-2 border-[#4d4639] bg-gray-700 cursor-pointer flex items-center justify-center font-bold text-sm"
+              title={user.email}
+              className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-white text-xs uppercase cursor-pointer hover:ring-2 ring-blue-500 transition-all"
             >
               {user.name?.charAt(0)}
             </div>
           </div>
         </header>
 
-        <div className="px-6 md:px-12 py-8 flex-grow">
+        <div className="px-4 sm:px-6 md:px-10 py-6 flex-grow">
           {/* TAB: SEARCH */}
           {activeTab === "search" && (
-            <div className="max-w-3xl mx-auto flex flex-col justify-center min-h-[60vh] animate-in fade-in duration-500">
-              <div className="text-center mb-10">
-                <h2
-                  className="text-4xl font-bold text-[#e2e2e5] mb-4"
-                  style={{ fontFamily: "Hanken Grotesk" }}
-                >
+            <div className="max-w-2xl mx-auto flex flex-col justify-center min-h-[60vh] animate-in fade-in duration-300">
+              <div className="mb-8 text-center">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
                   Find Your Business
                 </h2>
-                <p className="text-[#d0c5b4] max-w-lg mx-auto">
-                  Search Google Maps to connect your business profile and unlock
-                  your MapScore AI insights.
+                <p className="text-slate-400 text-sm">
+                  Enter your business name and city to see how you rank.
                 </p>
               </div>
-
               <form
                 onSubmit={handleSearch}
-                className="flex flex-col md:flex-row gap-4 mb-8 bg-[#1E2124] p-5 rounded-xl border border-white/5 shadow-lg w-full"
+                className="flex flex-col sm:flex-row gap-3 mb-8 bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-sm w-full"
               >
-                <div className="flex-1 relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#999080]">
-                    store
-                  </span>
+                <div className="flex-1">
+                  <label className="block text-slate-400 text-xs font-semibold mb-1 ml-1 uppercase tracking-wide">
+                    Business Name
+                  </label>
                   <input
                     required
-                    className="w-full bg-[#121416] border border-[#4d4639]/50 p-4 pl-12 rounded-lg text-[#e2e2e5] focus:outline-none focus:border-[#e9c77e] transition-colors"
-                    placeholder="Business Name..."
+                    className="w-full bg-slate-900 border border-slate-600 p-2.5 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+                    placeholder="e.g. John's Coffee"
                     onChange={(e) => setBusinessName(e.target.value)}
                   />
                 </div>
-                <div className="flex-1 relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-[#999080]">
-                    location_on
-                  </span>
+                <div className="flex-1">
+                  <label className="block text-slate-400 text-xs font-semibold mb-1 ml-1 uppercase tracking-wide">
+                    City
+                  </label>
                   <input
                     required
-                    className="w-full bg-[#121416] border border-[#4d4639]/50 p-4 pl-12 rounded-lg text-[#e2e2e5] focus:outline-none focus:border-[#e9c77e] transition-colors"
-                    placeholder="City / Area..."
+                    className="w-full bg-slate-900 border border-slate-600 p-2.5 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
+                    placeholder="e.g. Jakarta Selatan"
                     onChange={(e) => setLocation(e.target.value)}
                   />
                 </div>
-                <button
-                  disabled={isSearching}
-                  className="bg-[#e9c77e] text-[#251a00] font-bold px-10 py-4 rounded-lg hover:opacity-90 transition-opacity"
-                >
-                  {isSearching ? "Searching" : "Analyze"}
-                </button>
+                <div className="flex items-end">
+                  <button
+                    disabled={isSearching}
+                    className="w-full sm:w-auto bg-blue-600 text-white font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-blue-500 disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {isSearching ? "Searching..." : "Search"}
+                  </button>
+                </div>
               </form>
-
-              <div className="space-y-4 w-full">
+              <div className="space-y-3 w-full">
                 {searchResults.map((b, i) => (
                   <div
                     key={i}
-                    className="p-6 bg-[#1E2124] border border-[#4d4639]/50 rounded-xl flex justify-between items-center hover:border-[#e9c77e]/50 transition-colors shadow-sm"
+                    className="p-4 bg-slate-800 border border-slate-700 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-blue-500 transition-colors"
                   >
                     <div>
-                      <h4 className="font-bold text-xl mb-1 text-[#e2e2e5]">
+                      <h4 className="font-bold text-base text-white mb-1">
                         {b.name}
                       </h4>
-                      <p className="text-sm text-[#999080] flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[16px]">
+                      <p className="text-xs text-slate-400 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">
                           location_on
-                        </span>{" "}
+                        </span>
                         {b.location}
                       </p>
                     </div>
                     <button
                       onClick={() => handleSelectBusiness(b)}
-                      className="bg-[#333537] hover:bg-[#e9c77e] hover:text-[#251a00] px-8 py-3 rounded-lg font-medium transition-colors border border-[#4d4639]/50"
+                      className="w-full sm:w-auto bg-slate-700 hover:bg-white hover:text-slate-900 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors"
                     >
                       Select
                     </button>
@@ -509,381 +633,352 @@ export default function App() {
             </div>
           )}
 
-          {/* FALLBACK KOSONG */}
+          {/* NO DASHBOARD FALLBACK */}
           {!dashboardData &&
             (activeTab === "dashboard" ||
               activeTab === "leaderboard" ||
               activeTab === "checklist") && (
-              <div className="flex flex-col items-center justify-center mt-20 text-center animate-in fade-in duration-500">
-                <span className="material-symbols-outlined text-[64px] text-[#4d4639] mb-4">
-                  analytics
-                </span>
-                <h2
-                  className="text-2xl font-bold text-[#e2e2e5] mb-2"
-                  style={{ fontFamily: "Hanken Grotesk" }}
-                >
-                  No Active Dashboard
+              <div className="flex flex-col items-center justify-center mt-20 text-center animate-in fade-in">
+                <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                  <span className="material-symbols-outlined text-3xl text-slate-500">
+                    monitoring
+                  </span>
+                </div>
+                <h2 className="text-xl font-bold text-white mb-2">
+                  No Dashboard Selected
                 </h2>
-                <p className="text-[#d0c5b4] max-w-md">
-                  Select a business from your Profile Hub or search for a new
-                  one to view analytics.
+                <p className="text-slate-400 text-sm max-w-sm mb-6">
+                  Please select a business from your profile or search for a new
+                  one.
                 </p>
+                <button
+                  onClick={() => setActiveTab("profile")}
+                  className="bg-blue-600 text-white font-semibold text-sm px-6 py-2.5 rounded-lg hover:bg-blue-500 transition-colors"
+                >
+                  Open Profile
+                </button>
               </div>
             )}
 
-          {/* TAB: DASHBOARD */}
+          {/* ==================== TAB: DASHBOARD (Dengan Matriks Penilaian) ==================== */}
           {activeTab === "dashboard" && dashboardData && (
-            <div className="animate-in fade-in duration-500">
-              <header className="mb-10">
-                <h2
-                  className="text-3xl md:text-4xl font-bold text-[#e2e2e5] mb-2"
-                  style={{ fontFamily: "Hanken Grotesk" }}
-                >
+            <div className="animate-in fade-in duration-300 max-w-5xl mx-auto">
+              <header className="mb-6 bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-sm">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
                   {dashboardData.business.name}
                 </h2>
-                <p className="text-[#d0c5b4] flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">
+                <p className="text-slate-400 text-sm flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[16px]">
                     location_on
-                  </span>{" "}
+                  </span>
                   {dashboardData.business.location}
                 </p>
               </header>
 
-              <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                <div className="bg-[#1E2124] rounded-xl p-8 shadow-[0_12px_32px_rgba(0,0,0,0.4)] border border-white/5 flex flex-col justify-between">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2
-                      className="font-bold text-lg text-[#e2e2e5]"
-                      style={{ fontFamily: "Hanken Grotesk" }}
-                    >
-                      Your MapScore
-                    </h2>
-                    <span className="material-symbols-outlined text-[#73d9b5] opacity-80">
-                      analytics
+              {/* KARTU METRIK */}
+              <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-sm flex flex-col justify-center items-center text-center">
+                  <h2 className="font-semibold text-sm text-slate-400 mb-1">
+                    Total MapScore
+                  </h2>
+                  <div className="text-4xl font-extrabold text-blue-400">
+                    {totalScore}
+                    <span className="text-lg text-slate-500 font-medium ml-1">
+                      /100
                     </span>
-                  </div>
-                  <div
-                    className="text-5xl font-bold text-[#73d9b5] drop-shadow-[0_0_15px_rgba(115,217,181,0.4)]"
-                    style={{ fontFamily: "Hanken Grotesk" }}
-                  >
-                    {dashboardData.business.scoreHistory[0]?.score || 0}
                   </div>
                 </div>
-
-                <div className="bg-[#1E2124] rounded-xl p-8 shadow-[0_12px_32px_rgba(0,0,0,0.4)] border border-white/5 flex flex-col justify-between">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2
-                      className="font-bold text-lg text-[#e2e2e5]"
-                      style={{ fontFamily: "Hanken Grotesk" }}
-                    >
-                      Current Rank
-                    </h2>
-                    <span className="material-symbols-outlined text-[#e9c77e] opacity-80">
-                      emoji_events
-                    </span>
-                  </div>
-                  <div
-                    className="text-[36px] font-bold text-[#e2e2e5] leading-tight"
-                    style={{ fontFamily: "Hanken Grotesk" }}
-                  >
+                <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-sm flex flex-col justify-center items-center text-center">
+                  <h2 className="font-semibold text-sm text-slate-400 mb-1">
+                    Local Rank
+                  </h2>
+                  <div className="text-4xl font-extrabold text-white">
                     #{dashboardData.business.scoreHistory[0]?.rank || 1}
                   </div>
                 </div>
-
-                <div className="bg-[#1E2124] rounded-xl p-8 shadow-[0_12px_32px_rgba(0,0,0,0.4)] border border-white/5 flex flex-col justify-between">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2
-                      className="font-bold text-lg text-[#e2e2e5]"
-                      style={{ fontFamily: "Hanken Grotesk" }}
-                    >
-                      Total Reviews
-                    </h2>
-                    <span className="material-symbols-outlined text-[#999080] opacity-80">
-                      reviews
-                    </span>
-                  </div>
-                  <div
-                    className="text-5xl font-bold text-[#e2e2e5]"
-                    style={{ fontFamily: "Hanken Grotesk" }}
-                  >
+                <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-sm flex flex-col justify-center items-center text-center">
+                  <h2 className="font-semibold text-sm text-slate-400 mb-1">
+                    Total Reviews
+                  </h2>
+                  <div className="text-4xl font-extrabold text-emerald-400">
                     {dashboardData.business.totalReviews}
                   </div>
                 </div>
               </section>
 
-              <section className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                <div className="flex flex-col gap-4">
-                  <h3
-                    className="text-2xl font-bold text-[#e2e2e5]"
-                    style={{ fontFamily: "Hanken Grotesk" }}
-                  >
-                    Local Snapshot
+              {/* TABEL MATRIKS PENILAIAN */}
+              <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-sm mb-6">
+                <div className="p-5 border-b border-slate-700 bg-slate-900/30">
+                  <h3 className="text-lg font-bold text-white mb-1">
+                    Matriks Penilaian MapScore
                   </h3>
-                  <div className="bg-[#1E2124] rounded-xl overflow-hidden shadow-[0_12px_32px_rgba(0,0,0,0.4)] border border-white/5 relative h-[400px] lg:h-[500px]">
-                    <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center mix-blend-overlay grayscale"></div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#121416] via-transparent to-transparent"></div>
-
-                    <div className="relative w-full h-full p-8">
-                      <div className="absolute top-[20%] left-[30%] flex flex-col items-center">
-                        <div className="w-4 h-4 rounded-full bg-[#4d4639]"></div>
-                        <div className="w-[1px] h-6 bg-[#4d4639]"></div>
-                      </div>
-                      <div className="absolute top-[45%] right-[25%] flex flex-col items-center">
-                        <div className="w-4 h-4 rounded-full bg-[#4d4639]"></div>
-                        <div className="w-[1px] h-8 bg-[#4d4639]"></div>
-                      </div>
-                      <div className="absolute bottom-[35%] left-[40%] flex flex-col items-center">
-                        <div className="w-4 h-4 rounded-full bg-[#4d4639]"></div>
-                        <div className="w-[1px] h-4 bg-[#4d4639]"></div>
-                      </div>
-
-                      <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-10">
-                        <div className="relative">
-                          <div className="w-6 h-6 rounded-full bg-[#e9c77e] shadow-[0_0_20px_rgba(233,199,126,0.6)] z-10 relative flex items-center justify-center">
-                            <div className="w-2 h-2 bg-[#3f2e00] rounded-full"></div>
-                          </div>
-                          <div className="absolute inset-0 rounded-full bg-[#e9c77e]/30 animate-ping"></div>
-                        </div>
-                        <div className="w-[2px] h-10 bg-gradient-to-b from-[#e9c77e] to-transparent"></div>
-                        <div className="mt-2 bg-[#282a2c] px-3 py-1 rounded-full border border-white/10 text-[#e9c77e] text-[12px] font-medium backdrop-blur-sm max-w-[200px] truncate text-center">
-                          {dashboardData.business.name}
-                        </div>
-                      </div>
-
-                      <div className="absolute bottom-8 left-8">
-                        <p className="text-[14px] font-semibold text-[#999080] tracking-widest uppercase">
-                          Target Area
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <p className="text-slate-400 text-sm">
+                    Rincian dari mana skor Anda berasal berdasarkan metrik SEO
+                    lokal.
+                  </p>
                 </div>
-
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="material-symbols-outlined text-[#73d9b5]">
-                      auto_awesome
-                    </span>
-                    <h3
-                      className="text-2xl font-bold text-[#e2e2e5]"
-                      style={{ fontFamily: "Hanken Grotesk" }}
-                    >
-                      Top Recommendations
-                    </h3>
-                  </div>
-                  <div className="flex flex-col gap-4">
-                    {dashboardData.business.tasks
-                      .slice(0, 3)
-                      .map((task: any, idx: number) => (
-                        <div
-                          key={idx}
-                          onClick={() => setActiveTab("checklist")}
-                          className="bg-[#1E2124] rounded-xl p-6 shadow-[0_12px_32px_rgba(0,0,0,0.4)] border border-white/5 hover:border-[#73d9b5]/30 transition-colors duration-300 cursor-pointer group flex items-start gap-4"
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left min-w-[500px]">
+                    <thead className="bg-slate-900/50">
+                      <tr>
+                        <th className="p-4 text-slate-400 uppercase text-xs font-bold w-12 text-center">
+                          No
+                        </th>
+                        <th className="p-4 text-slate-400 uppercase text-xs font-bold">
+                          Aspek Penilaian
+                        </th>
+                        <th className="p-4 text-center text-slate-400 uppercase text-xs font-bold w-32">
+                          Skor Didapat
+                        </th>
+                        <th className="p-4 text-center text-slate-400 uppercase text-xs font-bold w-32">
+                          Skor Maksimal
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/50">
+                      {matrix.map((m) => (
+                        <tr
+                          key={m.id}
+                          className="hover:bg-slate-700/30 transition-colors"
                         >
-                          <div className="w-10 h-10 rounded-full bg-[#73d9b5]/10 flex items-center justify-center flex-shrink-0 mt-1">
-                            <span className="material-symbols-outlined text-[#73d9b5]">
-                              bolt
-                            </span>
-                          </div>
-                          <div>
-                            <h4
-                              className="text-[18px] font-medium text-[#e2e2e5] mb-2 group-hover:text-[#73d9b5] transition-colors"
-                              style={{ fontFamily: "Hanken Grotesk" }}
-                            >
-                              {generateShortTitle(task.description)}
-                            </h4>
-                            <p className="text-[14px] text-[#d0c5b4]">
-                              + {task.impactScore} MapScore Impact
-                            </p>
-                          </div>
-                        </div>
+                          <td className="p-4 text-center text-sm font-bold text-slate-500">
+                            {m.id}
+                          </td>
+                          <td className="p-4 text-sm font-semibold text-white">
+                            {m.name}
+                          </td>
+                          <td className="p-4 text-center text-sm font-bold text-blue-400">
+                            {m.score}
+                          </td>
+                          <td className="p-4 text-center text-sm font-bold text-slate-500">
+                            {m.max}
+                          </td>
+                        </tr>
                       ))}
-                  </div>
+                      {/* Baris Total */}
+                      <tr className="bg-slate-900/50">
+                        <td
+                          colSpan={2}
+                          className="p-4 text-right text-sm font-bold text-slate-400 uppercase tracking-widest"
+                        >
+                          Total Skor Keseluruhan
+                        </td>
+                        <td className="p-4 text-center text-xl font-extrabold text-blue-400">
+                          {totalScore}
+                        </td>
+                        <td className="p-4 text-center text-xl font-extrabold text-slate-500">
+                          100
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
-              </section>
+              </div>
+
+              <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                <div className="text-center sm:text-left">
+                  <h3 className="text-lg font-bold text-white mb-1">
+                    Skor Anda belum maksimal?
+                  </h3>
+                  <p className="text-slate-400 text-sm">
+                    Lihat daftar tugas yang dibuat khusus untuk menutupi
+                    kekurangan skor di atas.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab("checklist")}
+                  className="w-full sm:w-auto bg-blue-600 text-white font-bold text-sm px-6 py-2.5 rounded-lg hover:bg-blue-500 transition-colors shadow-sm whitespace-nowrap"
+                >
+                  View To-Do List
+                </button>
+              </div>
             </div>
           )}
 
           {/* TAB: LEADERBOARD */}
           {activeTab === "leaderboard" && dashboardData && (
-            <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
-              <h2
-                className="text-3xl font-bold text-[#e2e2e5] mb-2"
-                style={{ fontFamily: "Hanken Grotesk" }}
-              >
-                Local Leaderboard
-              </h2>
-              <p className="text-[#d0c5b4] mb-8">
-                Top 5 Competitors in your target location.
-              </p>
-
-              <div className="bg-[#1E2124] rounded-xl border border-white/5 overflow-hidden shadow-lg overflow-x-auto">
-                <table className="w-full text-left min-w-[600px]">
-                  <thead className="bg-[#121416]">
-                    <tr>
-                      <th className="p-6 text-[#999080] uppercase text-xs font-bold tracking-widest border-b border-white/5">
-                        Rank
-                      </th>
-                      <th className="p-6 text-[#999080] uppercase text-xs font-bold tracking-widest border-b border-white/5">
-                        Business Name
-                      </th>
-                      <th className="p-6 text-[#999080] uppercase text-xs font-bold tracking-widest border-b border-white/5">
-                        Rating
-                      </th>
-                      <th className="p-6 text-center text-[#999080] uppercase text-xs font-bold tracking-widest border-b border-white/5">
-                        Total Reviews
-                      </th>
-                      <th className="text-right p-6 text-[#999080] uppercase text-xs font-bold tracking-widest border-b border-white/5">
-                        MapScore
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {dashboardData.competitors.length === 0 ? (
+            <div className="max-w-4xl mx-auto animate-in fade-in duration-300">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-white mb-1">
+                  Competitor Rank
+                </h2>
+                <p className="text-slate-400 text-sm">
+                  See how you compare to top businesses in your area.
+                </p>
+              </div>
+              <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left min-w-[500px]">
+                    <thead className="bg-slate-900/50">
                       <tr>
-                        <td colSpan={5} className="p-16 text-center">
-                          <div className="flex flex-col items-center justify-center">
-                            <span className="material-symbols-outlined text-[40px] text-[#e9c77e] animate-spin mb-4">
-                              sync
-                            </span>
-                            <p className="text-[#d0c5b4] font-medium tracking-widest uppercase text-sm">
-                              Pulling Live Map Data...
-                            </p>
-                          </div>
-                        </td>
+                        <th className="p-4 text-slate-400 uppercase text-xs font-bold">
+                          Rank
+                        </th>
+                        <th className="p-4 text-slate-400 uppercase text-xs font-bold">
+                          Business Name
+                        </th>
+                        <th className="p-4 text-slate-400 uppercase text-xs font-bold">
+                          Rating
+                        </th>
+                        <th className="p-4 text-center text-slate-400 uppercase text-xs font-bold">
+                          Reviews
+                        </th>
+                        <th className="text-right p-4 text-slate-400 uppercase text-xs font-bold">
+                          Score
+                        </th>
                       </tr>
-                    ) : (
-                      dashboardData.competitors.map((c: any, i: number) => {
-                        const isUser = c.name === dashboardData.business.name;
-                        return (
-                          <tr
-                            key={i}
-                            className={`${
-                              isUser
-                                ? "bg-[#e9c77e]/5"
-                                : "hover:bg-white/[0.02]"
-                            } transition-colors`}
-                          >
-                            <td className="p-6 text-xl font-bold text-[#d0c5b4]">
-                              {c.rank}
-                            </td>
-                            <td className="p-6">
-                              <div className="flex items-center gap-3">
-                                <span
-                                  className={`font-medium text-lg ${
-                                    isUser ? "text-[#e9c77e]" : "text-[#e2e2e5]"
-                                  }`}
-                                >
-                                  {c.name}
-                                </span>
-                                {isUser && (
-                                  <span className="bg-[#e9c77e] text-[#251a00] text-[10px] font-bold px-2 py-1 rounded tracking-widest">
-                                    YOU
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/50">
+                      {dashboardData.competitors.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="p-10 text-center">
+                            <span className="material-symbols-outlined text-3xl text-blue-500 animate-spin mb-2 block">
+                              autorenew
+                            </span>
+                            <p className="text-slate-400 text-sm">
+                              Gathering data...
+                            </p>
+                          </td>
+                        </tr>
+                      ) : (
+                        dashboardData.competitors.map((c: any, i: number) => {
+                          const isUser = c.name === dashboardData.business.name;
+                          return (
+                            <tr
+                              key={i}
+                              className={`${
+                                isUser
+                                  ? "bg-blue-900/20"
+                                  : "hover:bg-slate-700/30"
+                              } transition-colors`}
+                            >
+                              <td className="p-4 text-lg font-bold text-slate-500">
+                                {c.rank}
+                              </td>
+                              <td className="p-4">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={`font-semibold text-sm ${
+                                      isUser ? "text-blue-400" : "text-white"
+                                    }`}
+                                  >
+                                    {c.name}
                                   </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-6 text-lg font-bold text-[#e9c77e]">
-                              {c.rating ? c.rating.toFixed(1) : "0.0"}{" "}
-                              <span className="text-sm opacity-80">⭐</span>
-                            </td>
-                            <td className="p-6 text-center text-lg font-bold text-[#d0c5b4]">
-                              {c.reviews || 0}
-                            </td>
-                            <td className="p-6 text-right text-xl font-bold text-[#e2e2e5]">
-                              {c.score}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+                                  {isUser && (
+                                    <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase">
+                                      You
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-4 text-sm font-bold text-yellow-400">
+                                {c.rating ? c.rating.toFixed(1) : "0.0"}{" "}
+                                <span className="opacity-80">★</span>
+                              </td>
+                              <td className="p-4 text-center text-sm font-semibold text-slate-300">
+                                {c.reviews || 0}
+                              </td>
+                              <td className="p-4 text-right text-lg font-bold text-white">
+                                {c.score}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
 
-          {/* TAB: CHECKLIST (DROPDOWN/ACCORDION) */}
+          {/* ==================== TAB: CHECKLIST (MENGIKUTI MATRIKS) ==================== */}
           {activeTab === "checklist" && dashboardData && (
-            <div className="max-w-3xl mx-auto animate-in fade-in duration-500">
-              <h2
-                className="text-3xl font-bold text-[#e2e2e5] mb-2"
-                style={{ fontFamily: "Hanken Grotesk" }}
-              >
-                Task Checklist
-              </h2>
-              <p className="text-[#d0c5b4] mb-8">
-                Execute these tasks to outrank your competitors.
-              </p>
+            <div className="max-w-3xl mx-auto animate-in fade-in duration-300">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-white mb-1">
+                  Targeted To-Do List
+                </h2>
+                <p className="text-slate-400 text-sm">
+                  Tugas di bawah ini disusun khusus untuk menutupi kekurangan
+                  skor di matriks Anda.
+                </p>
+              </div>
 
               <div className="space-y-4">
-                {dashboardData.business.tasks.map((t: any, i: number) => {
+                {dynamicTasks.map((t: any, i: number) => {
                   const isCompleted = completedTaskIds.includes(i);
                   const isExpanded = expandedTaskId === i;
                   return (
                     <div
                       key={i}
-                      className={`rounded-xl transition-all border overflow-hidden
-                       ${
-                         isCompleted
-                           ? "bg-[#121416] border-white/5 opacity-60"
-                           : "bg-[#1E2124] border-[#4d4639]/50 shadow-lg hover:border-[#73d9b5]/50"
-                       }`}
+                      className={`rounded-2xl transition-all border overflow-hidden cursor-pointer ${
+                        isCompleted
+                          ? "bg-slate-900 border-slate-800 opacity-60"
+                          : "bg-slate-800 border-slate-700 hover:border-blue-500 shadow-sm"
+                      }`}
+                      onClick={() => setExpandedTaskId(isExpanded ? null : i)}
                     >
-                      <div
-                        className="p-6 flex items-center justify-between cursor-pointer select-none"
-                        onClick={() => setExpandedTaskId(isExpanded ? null : i)}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div
+                      <div className="p-4 sm:p-5 flex items-center justify-between">
+                        <div className="flex items-center gap-4 flex-1">
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               toggleTask(i);
                             }}
-                            className={`w-6 h-6 rounded-md border flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer hover:bg-[#73d9b5]/20
-                                 ${
-                                   isCompleted
-                                     ? "bg-[#73d9b5] border-[#73d9b5]"
-                                     : "border-[#999080] bg-transparent"
-                                 }`}
+                            className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
+                              isCompleted
+                                ? "bg-emerald-500 border-emerald-500"
+                                : "border-slate-500 bg-slate-900 hover:border-blue-400"
+                            }`}
                           >
                             {isCompleted && (
-                              <span className="material-symbols-outlined text-[#003829] text-[16px] font-bold">
+                              <span className="material-symbols-outlined text-white text-[18px] font-bold">
                                 check
                               </span>
                             )}
-                          </div>
+                          </button>
                           <div>
                             <p
-                              className={`font-medium text-lg ${
+                              className={`font-semibold text-sm sm:text-base pr-2 truncate ${
                                 isCompleted
-                                  ? "text-[#999080] line-through"
-                                  : "text-[#e2e2e5]"
+                                  ? "text-slate-500 line-through"
+                                  : "text-white"
                               }`}
                             >
                               {generateShortTitle(t.description)}
                             </p>
-                            <p className="text-[12px] font-medium text-[#73d9b5] tracking-widest uppercase mt-1">
-                              Impact: {t.impactScore}
+                            <p className="text-xs font-medium text-slate-500 mt-0.5">
+                              Aspek: {t.aspect}
                             </p>
                           </div>
                         </div>
-                        <span
-                          className={`material-symbols-outlined text-[#999080] transition-transform duration-300 ${
-                            isExpanded ? "rotate-180" : "rotate-0"
-                          }`}
-                        >
-                          expand_more
-                        </span>
+
+                        <div className="flex items-center flex-shrink-0 ml-2">
+                          <span
+                            className={`material-symbols-outlined text-slate-400 transition-transform duration-300 ${
+                              isExpanded ? "rotate-180" : "rotate-0"
+                            }`}
+                          >
+                            expand_more
+                          </span>
+                        </div>
                       </div>
 
-                      {isExpanded && !isCompleted && (
-                        <div className="px-6 pb-6 pt-2 pl-16 border-t border-white/5 text-[#d0c5b4] text-sm leading-relaxed bg-[#16181A] animate-in slide-in-from-top-2 duration-300">
-                          <div className="flex items-start gap-2">
-                            <span className="material-symbols-outlined text-[#e9c77e] text-[18px]">
-                              lightbulb
-                            </span>
-                            <p>{t.description}</p>
+                      {isExpanded && (
+                        <div className="px-4 sm:px-5 pb-5 pl-[64px] sm:pl-[68px] animate-in slide-in-from-top-2 duration-300">
+                          <div className="border-t border-slate-700 pt-4 mt-1">
+                            <p className="text-slate-300 text-sm leading-relaxed mb-4">
+                              {t.description}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <span className="bg-blue-900/50 border border-blue-800/50 text-blue-400 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 w-fit">
+                                <span className="material-symbols-outlined text-[14px]">
+                                  bolt
+                                </span>
+                                Impact Score: +{t.impactScore} Pts
+                              </span>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -896,125 +991,201 @@ export default function App() {
 
           {/* TAB: PROFILE HUB */}
           {activeTab === "profile" && (
-            <div className="max-w-5xl mx-auto animate-in fade-in duration-500">
-              <h2
-                className="text-3xl font-bold text-[#e2e2e5] mb-2"
-                style={{ fontFamily: "Hanken Grotesk" }}
-              >
-                Profile Hub
-              </h2>
-              <p className="text-[#d0c5b4] mb-8">
-                Manage all your local business properties.
-              </p>
+            <div className="max-w-4xl mx-auto animate-in fade-in duration-300">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-white mb-1">
+                  Profile Overview
+                </h2>
+                <p className="text-slate-400 text-sm">
+                  Track the performance of all your properties.
+                </p>
+              </div>
 
               {myBusinesses.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 bg-[#1E2124] border border-dashed border-[#4d4639] rounded-xl text-center shadow-sm">
-                  <span className="material-symbols-outlined text-[64px] text-[#4d4639] mb-4">
-                    storefront
+                <div className="flex flex-col items-center justify-center py-16 bg-slate-800 border border-dashed border-slate-600 rounded-2xl text-center">
+                  <span className="material-symbols-outlined text-4xl text-slate-500 mb-3">
+                    domain_add
                   </span>
-                  <h3
-                    className="text-2xl font-bold text-[#e2e2e5] mb-2"
-                    style={{ fontFamily: "Hanken Grotesk" }}
-                  >
-                    You haven't registered your business yet
+                  <h3 className="text-lg font-bold text-white mb-2">
+                    No Businesses Saved
                   </h3>
-                  <p className="text-[#d0c5b4] mb-8 max-w-md">
+                  <p className="text-slate-400 text-sm mb-6 max-w-sm">
                     Add your business to start tracking your local SEO
-                    performance and get AI-driven insights.
+                    performance.
                   </p>
                   <button
                     onClick={() => setActiveTab("search")}
-                    className="bg-[#e9c77e] text-[#251a00] font-bold px-8 py-3 rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2"
+                    className="bg-blue-600 text-white font-semibold text-sm px-6 py-2.5 rounded-lg hover:bg-blue-500 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[20px]">
-                      add_circle
-                    </span>
-                    Register a Business
+                    Add a Business
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {myBusinesses.map((b) => (
-                    <div
-                      key={b.id}
-                      className="bg-[#1E2124] p-8 rounded-xl border border-[#4d4639]/50 shadow-lg relative group hover:border-[#e9c77e]/40 transition-colors"
-                    >
-                      <button
-                        onClick={() => handleDeleteBusiness(b.id)}
-                        className="absolute top-6 right-6 text-[#999080] hover:text-[#ffb4ab] transition-colors"
-                      >
-                        <span className="material-symbols-outlined">
-                          delete
-                        </span>
-                      </button>
-                      <h4
-                        className="text-2xl font-bold text-[#e2e2e5] mb-1 pr-10"
-                        style={{ fontFamily: "Hanken Grotesk" }}
-                      >
-                        {b.name}
-                      </h4>
-                      <p className="text-[#999080] text-sm mb-8 truncate">
-                        {b.location}
+                <>
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700 flex flex-col justify-center items-center text-center shadow-sm">
+                      <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">
+                        Total Businesses
                       </p>
+                      <p className="text-4xl font-extrabold text-white">
+                        {myBusinesses.length}
+                      </p>
+                    </div>
 
-                      <div className="flex justify-between items-end border-t border-white/5 pt-6">
-                        <div>
-                          <p className="text-[12px] font-bold text-[#999080] uppercase tracking-widest mb-1">
-                            Score
+                    <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700 flex flex-col justify-center items-center text-center shadow-sm">
+                      <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">
+                        Top Business
+                      </p>
+                      {topBusiness ? (
+                        <>
+                          <p className="text-lg font-bold text-blue-400 truncate w-full px-2">
+                            {topBusiness.name}
                           </p>
-                          <p
-                            className="text-4xl font-bold text-[#e9c77e]"
-                            style={{ fontFamily: "Hanken Grotesk" }}
+                          <p className="text-sm font-semibold text-slate-300">
+                            Score: {topBusiness.scoreHistory?.[0]?.score || 0}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-slate-500 text-sm">No data yet</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 mb-6 shadow-sm">
+                    <div className="flex justify-between items-center mb-8">
+                      <h3 className="text-base font-bold text-white">
+                        Business Growth Stats
+                      </h3>
+                      <div className="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
+                        {["day", "week", "month"].map((t) => (
+                          <button
+                            key={t}
+                            onClick={() => setChartTimeRange(t as any)}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                              chartTimeRange === t
+                                ? "bg-blue-600 text-white"
+                                : "text-slate-400 hover:text-white"
+                            }`}
                           >
-                            {b.scoreHistory[0]?.score || 0}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleOpenDashboard(b)}
-                          className="bg-[#333537] hover:bg-[#e2e2e5] hover:text-[#121416] px-6 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">
-                            open_in_new
-                          </span>
-                          Dashboard
-                        </button>
+                            {t.charAt(0).toUpperCase() + t.slice(1)}
+                          </button>
+                        ))}
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    <div className="relative h-40 flex items-end justify-between gap-2 border-b border-slate-700 pb-2">
+                      {chartData.map((val, idx) => {
+                        const heightPercentage = (val / maxChartValue) * 100;
+                        return (
+                          <div
+                            key={idx}
+                            className="flex flex-col items-center flex-1 group"
+                          >
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold text-white mb-1">
+                              {val}
+                            </span>
+                            <div
+                              className="w-full max-w-[40px] bg-blue-500 rounded-t-sm transition-all duration-500 ease-out group-hover:bg-blue-400"
+                              style={{ height: `${heightPercentage}%` }}
+                            ></div>
+                            <span className="text-[10px] font-medium text-slate-400 mt-2 absolute -bottom-6">
+                              {chartLabels[idx]}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-8 text-center">
+                      <p className="text-xs text-slate-500 font-medium">
+                        Average MapScore Growth (Simulated)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-sm">
+                    <div className="p-4 border-b border-slate-700 bg-slate-900/30">
+                      <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                        Your Businesses
+                      </h3>
+                    </div>
+
+                    <div className="divide-y divide-slate-700">
+                      {myBusinesses.map((b) => (
+                        <div
+                          key={b.id}
+                          className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-700/20 transition-colors"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-1">
+                              <h4 className="text-base font-bold text-white truncate">
+                                {b.name}
+                              </h4>
+                              <span className="bg-blue-900/50 text-blue-400 text-xs font-bold px-2 py-0.5 rounded border border-blue-800">
+                                {b.scoreHistory?.[0]?.score || 0} Score
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-400 truncate">
+                              {b.location}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <button
+                              onClick={() => handleOpenDashboard(b)}
+                              className="flex-1 sm:flex-none bg-slate-700 hover:bg-white hover:text-slate-900 px-4 py-2 rounded-lg text-xs font-bold transition-colors"
+                            >
+                              Dashboard
+                            </button>
+                            <button
+                              onClick={() => handleDeleteBusiness(b.id)}
+                              className="bg-slate-900 hover:bg-red-500/20 text-slate-500 hover:text-red-400 px-3 py-2 rounded-lg transition-colors border border-slate-700"
+                              title="Delete Business"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">
+                                delete
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           )}
         </div>
       </main>
 
-      {/* --- MOBILE BOTTOM NAV --- */}
-      <nav className="md:hidden fixed bottom-0 w-full bg-[#1e2022] border-t border-[#4d4639]/30 px-6 py-3 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
-        <ul className="flex justify-between items-center w-full">
+      {/* --- MOBILE BOTTOM NAVIGATION --- */}
+      <nav className="md:hidden fixed bottom-0 w-full bg-slate-950 border-t border-slate-800 px-1 py-2 z-50 shadow-[0_-5px_10px_rgba(0,0,0,0.3)]">
+        <ul className="flex justify-around items-center w-full">
           {["dashboard", "search", "profile"].map((t: any) => {
             const labels: any = {
               dashboard: "Dashboard",
-              search: "Add",
+              search: "Search",
               profile: "Profile",
             };
             const icons: any = {
-              dashboard: "dashboard",
-              search: "add_circle",
-              profile: "person",
+              dashboard: "insights",
+              search: "search",
+              profile: "account_circle",
             };
             const isActive = activeTab === t;
             return (
-              <li key={t}>
+              <li key={t} className="flex-1">
                 <button
                   onClick={() => setActiveTab(t)}
-                  className={`flex flex-col items-center gap-1 ${
+                  className={`w-full flex flex-col items-center gap-1 py-1.5 rounded-lg transition-colors ${
                     isActive
-                      ? "text-[#73d9b5]"
-                      : "text-[#d0c5b4] hover:text-[#e2e2e5]"
+                      ? "text-blue-400 bg-slate-900"
+                      : "text-slate-400 hover:text-slate-200"
                   }`}
                 >
-                  <span className="material-symbols-outlined">{icons[t]}</span>
-                  <span className="text-[10px] font-medium">{labels[t]}</span>
+                  <span className="material-symbols-outlined text-[22px]">
+                    {icons[t]}
+                  </span>
+                  <span className="text-[10px] font-bold">{labels[t]}</span>
                 </button>
               </li>
             );
