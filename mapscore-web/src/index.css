@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Styles for MapScore */
 .glass-panel {
     background: rgba(30, 33, 36, 0.6);
     backdrop-filter: blur(20px);
@@ -12,7 +11,7 @@
 }
 
 .search-input:focus {
-    border-color: #73d9b5; /* Secondary / Mint */
+    border-color: #73d9b5; 
     box-shadow: 0 0 0 1px rgba(115, 217, 181, 0.2), 0 0 15px rgba(115, 217, 181, 0.1);
 }
 

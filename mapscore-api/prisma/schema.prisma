@@ -11,7 +11,6 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// MODEL 1: USER (Menyimpan data login Google)
 model User {
   id        String     @id @default(uuid())
   email     String     @unique
@@ -20,15 +19,12 @@ model User {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  // Relasi One-to-Many: Satu user bisa punya banyak bisnis
   businesses Business[]
 }
 
-// MODEL 2: BUSINESS (Data bisnis dari Google Maps)
 model Business {
   id           String   @id @default(uuid())
   
-  // Foreign Key untuk menghubungkan ke User
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
@@ -40,12 +36,10 @@ model Business {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // Relasi ke tabel Task dan Score History
   tasks        Task[]
   scoreHistory ScoreHistory[]
 }
 
-// MODEL 3: SCORE HISTORY (Menyimpan riwayat peringkat)
 model ScoreHistory {
   id         String   @id @default(uuid())
   businessId String
@@ -56,7 +50,6 @@ model ScoreHistory {
   createdAt  DateTime @default(now())
 }
 
-// MODEL 4: TASK (Menyimpan AI Action Plan)
 model Task {
   id          String   @id @default(uuid())
   businessId  String
@@ -64,6 +57,6 @@ model Task {
   
   description String
   impactScore Int
-  isCompleted Boolean  @default(false) // Untuk menyimpan status checklist
+  isCompleted Boolean  @default(false) 
   createdAt   DateTime @default(now())
 }

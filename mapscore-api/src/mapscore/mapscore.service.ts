@@ -8,9 +8,6 @@ export class MapscoreService {
 
   constructor(private prisma: PrismaService) {}
 
-  // ==========================================
-  // HELPER 1: PENCARIAN BISNIS (MENGGUNAKAN API KEY 1)
-  // ==========================================
   private async fetchBusinessDetails(businessName: string, location: string) {
     const apiKey = process.env.BUSINESS_API_KEY || process.env.SERPAPI_KEY;
     const url = new URL('https://serpapi.com/search.json');
@@ -24,9 +21,6 @@ export class MapscoreService {
     return data.local_results?.[0] || data.place_results;
   }
 
-  // ==========================================
-  // HELPER 2: PENCARIAN KOMPETITOR (MENGGUNAKAN API KEY 2)
-  // ==========================================
   private async fetchCompetitors(category: string, location: string) {
     const apiKey = process.env.COMPETITOR_API_KEY || process.env.SERPAPI_KEY;
     const url = new URL('https://serpapi.com/search.json');
@@ -40,9 +34,6 @@ export class MapscoreService {
     return data.local_results || [];
   }
 
-  // ==========================================
-  // FUNGSI UTAMA: SEARCH OPTIONS (DIPANGGIL FRONTEND SAAT "ANALYZE")
-  // ==========================================
   async searchBusinessOptions(businessName: string, location: string) {
     try {
       const apiKey = process.env.BUSINESS_API_KEY || process.env.SERPAPI_KEY;
@@ -77,14 +68,10 @@ export class MapscoreService {
     }
   }
 
-  // ==========================================
-  // FUNGSI UTAMA: SAVE & ANALYZE (KLIK "SELECT" DI FRONTEND)
-  // ==========================================
   async saveAndAnalyzeBusiness(userId: string, businessName: string, location: string, competitorList: any[] = []) {
     try {
       const geminiApiKey = process.env.GEMINI_API_KEY;
 
-      // 1. Tentukan target bisnis menggunakan KUNCI 1 (via helper atau array frontend)
       let targetBusiness;
       if (competitorList && competitorList.length > 0) {
         targetBusiness = competitorList.find(b => b.name === businessName) || competitorList[0];
@@ -94,10 +81,8 @@ export class MapscoreService {
       
       if (!targetBusiness) throw new NotFoundException("Bisnis tidak ditemukan.");
 
-      // 2. Tarik Daftar Kompetitor menggunakan KUNCI 2
       let competitors = [];
       if (competitorList && competitorList.length >= 3) {
-        // Jika frontend sudah mengirimkan daftar lengkap (One-Shot Search)
         competitors = competitorList.slice(0, 5).map((biz: any, index: number) => ({
           rank: index + 1,
           name: biz.name || biz.title,
@@ -106,7 +91,6 @@ export class MapscoreService {
           score: Math.min(Math.round((biz.rating || 0) * 10 + (biz.reviews || 0) / 50), 99),
         }));
       } else {
-        // Tarik data kompetitor baru menggunakan API Key Kedua
         const category = Array.isArray(targetBusiness.type) ? targetBusiness.type[0] : (targetBusiness.type || 'Bisnis Lokal');
         const pureCompetitorList = await this.fetchCompetitors(category, location);
         
@@ -118,8 +102,6 @@ export class MapscoreService {
           score: Math.min(Math.round((biz.rating || 0) * 10 + (biz.reviews || 0) / 50), 99),
         }));
       }
-
-      // 3. Analisis Gemini AI
       const genAI = new GoogleGenerativeAI(geminiApiKey || '');
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       
@@ -137,8 +119,6 @@ export class MapscoreService {
           { description: "Tambahkan foto lokasi eksterior dan interior terbaru Anda bulan ini.", impactScore: 7 }
         ];
       }
-
-      // 4. Simpan ke Database
       const safeCat = Array.isArray(targetBusiness.type) ? targetBusiness.type[0] : (targetBusiness.type || 'Bisnis Lokal');
 
       await this.prisma.user.upsert({
@@ -171,8 +151,6 @@ export class MapscoreService {
       throw new InternalServerErrorException(error.message);
     }
   }
-
-  // TARIK LIST BISNIS USER
   async getUserBusinesses(userId: string) {
     return this.prisma.business.findMany({
       where: { userId },
@@ -180,8 +158,6 @@ export class MapscoreService {
       orderBy: { createdAt: 'desc' }
     });
   }
-
-  // HAPUS BISNIS
   async deleteBusiness(userId: string, businessId: string) {
     try {
       const biz = await this.prisma.business.findFirst({ where: { id: businessId, userId } });

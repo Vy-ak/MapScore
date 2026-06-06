@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 
 export default function App() {
-  // STATE MANAGEMENT
   const [user, setUser] = useState<any>(null);
   const [myBusinesses, setMyBusinesses] = useState<any[]>([]);
   const [dashboardData, setDashboardData] = useState<any>(null);
@@ -22,7 +21,6 @@ export default function App() {
     "day" | "week" | "month"
   >("month");
 
-  // API & AUTHENTICATION
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const userId = params.get("userId");
@@ -244,7 +242,6 @@ export default function App() {
     return words.slice(0, 6).join(" ") + "...";
   };
 
-  // MATRIKS PENILAIAN & TO-DO LIST
   let matrix: any[] = [];
   let dynamicTasks: any[] = [];
   let totalScore = 0;
@@ -324,7 +321,6 @@ export default function App() {
     }
   }
 
-  // Helpers Profile
   const getTopBusiness = () => {
     if (myBusinesses.length === 0) return null;
     return [...myBusinesses].sort(
@@ -357,7 +353,6 @@ export default function App() {
     ];
   };
 
-  // LOGIN SCREEN
   if (!user) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-slate-900 px-4 font-sans text-slate-100">
@@ -406,7 +401,6 @@ export default function App() {
     );
   }
 
-  // LOADING SCREEN
   if (isAnalyzing)
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-slate-100 px-6 text-center font-sans">
@@ -422,7 +416,6 @@ export default function App() {
       </div>
     );
 
-  // MAIN APPLICATION
   const topBusiness = getTopBusiness();
   const chartData = getChartData();
   const chartLabels = getChartLabels();
@@ -430,7 +423,6 @@ export default function App() {
 
   return (
     <div className="bg-slate-900 text-slate-200 min-h-screen flex flex-col md:flex-row font-sans">
-      {/* --- DESKTOP SIDEBAR --- */}
       <nav
         className={`hidden md:flex flex-col fixed left-0 top-0 h-screen z-40 bg-slate-950 border-r border-slate-800 shadow-xl transition-all duration-300 ease-in-out ${
           isSidebarOpen ? "w-56" : "w-16"
@@ -523,7 +515,6 @@ export default function App() {
         </div>
       </nav>
 
-      {/* --- MAIN CONTENT AREA --- */}
       <main
         className={`flex-grow flex flex-col pb-20 md:pb-0 transition-all duration-300 ease-in-out ${
           isSidebarOpen ? "md:ml-56" : "md:ml-16"
@@ -633,7 +624,6 @@ export default function App() {
             </div>
           )}
 
-          {/* NO DASHBOARD FALLBACK */}
           {!dashboardData &&
             (activeTab === "dashboard" ||
               activeTab === "leaderboard" ||
@@ -660,7 +650,6 @@ export default function App() {
               </div>
             )}
 
-          {/* ==================== TAB: DASHBOARD (Dengan Matriks Penilaian) ==================== */}
           {activeTab === "dashboard" && dashboardData && (
             <div className="animate-in fade-in duration-300 max-w-5xl mx-auto">
               <header className="mb-6 bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-sm">
@@ -675,7 +664,6 @@ export default function App() {
                 </p>
               </header>
 
-              {/* KARTU METRIK */}
               <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                 <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-sm flex flex-col justify-center items-center text-center">
                   <h2 className="font-semibold text-sm text-slate-400 mb-1">
@@ -706,7 +694,6 @@ export default function App() {
                 </div>
               </section>
 
-              {/* TABEL MATRIKS PENILAIAN */}
               <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-sm mb-6">
                 <div className="p-5 border-b border-slate-700 bg-slate-900/30">
                   <h3 className="text-lg font-bold text-white mb-1">
@@ -755,7 +742,6 @@ export default function App() {
                           </td>
                         </tr>
                       ))}
-                      {/* Baris Total */}
                       <tr className="bg-slate-900/50">
                         <td
                           colSpan={2}
@@ -795,7 +781,6 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB: LEADERBOARD */}
           {activeTab === "leaderboard" && dashboardData && (
             <div className="max-w-4xl mx-auto animate-in fade-in duration-300">
               <div className="mb-6">
@@ -892,7 +877,6 @@ export default function App() {
             </div>
           )}
 
-          {/* ==================== TAB: CHECKLIST (MENGIKUTI MATRIKS) ==================== */}
           {activeTab === "checklist" && dashboardData && (
             <div className="max-w-3xl mx-auto animate-in fade-in duration-300">
               <div className="mb-6">
@@ -989,7 +973,6 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB: PROFILE HUB */}
           {activeTab === "profile" && (
             <div className="max-w-4xl mx-auto animate-in fade-in duration-300">
               <div className="mb-6">
@@ -1157,7 +1140,6 @@ export default function App() {
         </div>
       </main>
 
-      {/* --- MOBILE BOTTOM NAVIGATION --- */}
       <nav className="md:hidden fixed bottom-0 w-full bg-slate-950 border-t border-slate-800 px-1 py-2 z-50 shadow-[0_-5px_10px_rgba(0,0,0,0.3)]">
         <ul className="flex justify-around items-center w-full">
           {["dashboard", "search", "profile"].map((t: any) => {
