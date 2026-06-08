@@ -254,7 +254,7 @@ export default function App() {
 
     let s1 = Math.min(Math.round((rating / 5) * 40), 40);
     let s2 = Math.min(Math.round((reviews / 150) * 30), 30);
-    let s3 = 15; // Max 15
+    let s3 = 15;
     let s4 = totalScore - (s1 + s2 + s3);
 
     if (s4 < 0) {
@@ -284,7 +284,7 @@ export default function App() {
         name: "Kuantitas Ulasan (Jumlah Review)",
         score: s2,
         max: 30,
-        task: "Buat program promo (misal: diskon 5%) khusus untuk pelanggan yang mau meninggalkan ulasan di Google Maps hari ini.",
+        task: "Buat program promo khusus untuk pelanggan yang mau meninggalkan ulasan di Google Maps hari ini.",
       },
       {
         id: 3,
@@ -355,33 +355,46 @@ export default function App() {
 
   if (!user) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-900 px-4 font-sans text-slate-100">
-        <div className="bg-slate-800 p-8 rounded-2xl shadow-xl max-w-sm w-full border border-slate-700 text-center">
+      <main className="min-h-screen flex flex-col relative bg-slate-900 font-sans text-slate-100">
+        {/* --- TOP NAVIGATION BAR --- */}
+        <nav className="absolute top-0 right-0 w-full p-6 md:p-8 flex justify-end items-center gap-4 md:gap-6 text-sm font-semibold text-slate-400">
+          <a href="#" className="hover:text-white transition-colors">
+            About Us
+          </a>
+          <span className="text-slate-700">|</span>
+          <a href="#" className="hover:text-white transition-colors">
+            FAQ
+          </a>
+          <span className="text-slate-700">|</span>
+          <a href="#" className="hover:text-white transition-colors">
+            Profile
+          </a>
+        </nav>
+
+        <div className="flex-grow flex flex-col items-center justify-center px-6">
           <img
-            src="/mapscore_logo_final.svg"
+            src="/mapscore_logo_transparent.svg"
             alt="MapScore Logo"
-            className="w-32 h-auto mx-auto mb-4 drop-shadow-lg"
+            className="w-48 sm:w-64 md:w-80 h-auto mb-10 drop-shadow-2xl"
           />
 
-          <h1 className="text-2xl font-extrabold mb-2 text-white tracking-tight">
-            MapScore
-          </h1>
-          <p className="text-slate-400 mb-8 text-sm">
-            Understand and grow your local business visibility.
-          </p>
-
-          <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full sm:w-auto">
             <a
               href="http://localhost:3000/auth/google"
-              className="w-full flex items-center justify-center gap-2 bg-white text-slate-900 font-bold text-sm py-2.5 px-4 rounded-lg hover:bg-slate-200 transition-colors shadow-sm"
+              className="w-full sm:w-auto flex items-center justify-center gap-3 bg-white text-slate-900 font-bold text-sm md:text-base py-3.5 px-8 rounded-full hover:bg-slate-200 transition-colors shadow-lg"
             >
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
                 alt="Google"
-                className="w-4 h-4"
+                className="w-5 h-5"
               />
-              Sign in with Google
+              Google Login
             </a>
+
+            <span className="hidden sm:block text-slate-700 font-light text-xl">
+              |
+            </span>
+
             <button
               onClick={() =>
                 setUser({
@@ -390,12 +403,12 @@ export default function App() {
                   email: "admin@mapscore.app",
                 })
               }
-              className="w-full flex items-center justify-center gap-2 bg-transparent border border-slate-600 text-slate-300 font-semibold text-sm py-2.5 px-4 rounded-lg hover:bg-slate-700 hover:text-white transition-colors"
+              className="w-full sm:w-auto flex items-center justify-center gap-3 bg-slate-800 border border-slate-700 text-white font-bold text-sm md:text-base py-3.5 px-8 rounded-full hover:bg-slate-700 hover:border-slate-500 transition-colors shadow-lg"
             >
-              <span className="material-symbols-outlined text-[18px]">
+              <span className="material-symbols-outlined text-[20px]">
                 code
               </span>
-              Developer Login
+              Dev Login
             </button>
           </div>
         </div>
@@ -551,6 +564,7 @@ export default function App() {
         </header>
 
         <div className="px-4 sm:px-6 md:px-10 py-6 flex-grow">
+          {/* TAB: SEARCH */}
           {activeTab === "search" && (
             <div className="max-w-2xl mx-auto flex flex-col justify-center min-h-[60vh] animate-in fade-in duration-300">
               <div className="mb-8 text-center">
@@ -782,6 +796,7 @@ export default function App() {
             </div>
           )}
 
+          {/* TAB: LEADERBOARD */}
           {activeTab === "leaderboard" && dashboardData && (
             <div className="max-w-4xl mx-auto animate-in fade-in duration-300">
               <div className="mb-6">
@@ -974,6 +989,7 @@ export default function App() {
             </div>
           )}
 
+          {/* TAB: PROFILE HUB */}
           {activeTab === "profile" && (
             <div className="max-w-4xl mx-auto animate-in fade-in duration-300">
               <div className="mb-6">
