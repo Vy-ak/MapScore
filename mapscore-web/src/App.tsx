@@ -356,7 +356,6 @@ export default function App() {
   if (!user) {
     return (
       <main className="min-h-screen flex flex-col relative bg-slate-900 font-sans text-slate-100">
-        {/* --- TOP NAVIGATION BAR --- */}
         <nav className="absolute top-0 right-0 w-full p-6 md:p-8 flex justify-end items-center gap-4 md:gap-6 text-sm font-semibold text-slate-400">
           <a href="#" className="hover:text-white transition-colors">
             About Us
@@ -375,7 +374,7 @@ export default function App() {
           <img
             src="/mapscore_logo_transparent.svg"
             alt="MapScore Logo"
-            className="w-48 sm:w-64 md:w-80 h-auto mb-10 drop-shadow-2xl"
+            className="w-64 sm:w-80 md:w-96 lg:w-[450px] h-auto mb-12 drop-shadow-2xl"
           />
 
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full sm:w-auto">
