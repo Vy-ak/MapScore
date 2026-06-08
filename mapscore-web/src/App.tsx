@@ -372,9 +372,9 @@ export default function App() {
 
         <div className="flex-grow flex flex-col items-center justify-center px-6">
           <img
-            src="/mapscore_logo_transparent.svg"
+            src="/mapscore_logo_final.svg"
             alt="MapScore Logo"
-            className="w-64 sm:w-80 md:w-96 lg:w-[450px] h-auto mb-12 drop-shadow-2xl"
+            className="w-80 sm:w-96 md:w-[500px] lg:w-[700px] xl:w-[800px] h-auto mb-4 drop-shadow-2xl"
           />
 
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full sm:w-auto">
