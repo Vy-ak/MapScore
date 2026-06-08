@@ -355,8 +355,12 @@ export default function App() {
 
   if (!user) {
     return (
-      <main className="min-h-screen flex flex-col relative bg-slate-900 font-sans text-slate-100">
-        <nav className="absolute top-0 right-0 w-full p-6 md:p-8 flex justify-end items-center gap-4 md:gap-6 text-sm font-semibold text-slate-400">
+      <main className="min-h-screen flex flex-col relative bg-slate-900 font-sans text-slate-100 overflow-hidden">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,#000_20%,transparent_100%)] pointer-events-none"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-blue-500/20 blur-[100px] sm:blur-[150px] rounded-full pointer-events-none"></div>
+        <div className="absolute top-1/4 left-1/4 w-[200px] h-[200px] bg-emerald-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+
+        <nav className="relative z-10 w-full p-6 md:p-8 flex justify-end items-center gap-4 md:gap-6 text-sm font-semibold text-slate-400">
           <a href="#" className="hover:text-white transition-colors">
             About Us
           </a>
@@ -370,17 +374,17 @@ export default function App() {
           </a>
         </nav>
 
-        <div className="flex-grow flex flex-col items-center justify-center px-6">
+        <div className="relative z-10 flex-grow flex flex-col items-center justify-center px-6">
           <img
-            src="/mapscore_logo_final.svg"
+            src="/mapscore_logo_transparent.svg"
             alt="MapScore Logo"
-            className="w-80 sm:w-96 md:w-[500px] lg:w-[700px] xl:w-[800px] h-auto mb-4 drop-shadow-2xl"
+            className="w-80 sm:w-96 md:w-[500px] lg:w-[700px] xl:w-[800px] h-auto mb-6 drop-shadow-2xl hover:scale-105 transition-transform duration-700 ease-out"
           />
 
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full sm:w-auto">
             <a
               href="http://localhost:3000/auth/google"
-              className="w-full sm:w-auto flex items-center justify-center gap-3 bg-white text-slate-900 font-bold text-sm md:text-base py-3.5 px-8 rounded-full hover:bg-slate-200 transition-colors shadow-lg"
+              className="w-full sm:w-auto flex items-center justify-center gap-3 bg-white text-slate-900 font-bold text-sm md:text-base py-3.5 px-8 rounded-full hover:bg-slate-200 hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:-translate-y-1 transition-all duration-300"
             >
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg"
@@ -402,7 +406,7 @@ export default function App() {
                   email: "admin@mapscore.app",
                 })
               }
-              className="w-full sm:w-auto flex items-center justify-center gap-3 bg-slate-800 border border-slate-700 text-white font-bold text-sm md:text-base py-3.5 px-8 rounded-full hover:bg-slate-700 hover:border-slate-500 transition-colors shadow-lg"
+              className="w-full sm:w-auto flex items-center justify-center gap-3 bg-slate-800/80 backdrop-blur-md border border-slate-700 text-white font-bold text-sm md:text-base py-3.5 px-8 rounded-full hover:bg-slate-700 hover:border-slate-500 hover:shadow-[0_0_20px_rgba(59,130,246,0.2)] hover:-translate-y-1 transition-all duration-300"
             >
               <span className="material-symbols-outlined text-[20px]">
                 code
