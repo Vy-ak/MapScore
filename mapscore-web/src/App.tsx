@@ -357,17 +357,19 @@ export default function App() {
     return (
       <main className="min-h-screen flex items-center justify-center bg-slate-900 px-4 font-sans text-slate-100">
         <div className="bg-slate-800 p-8 rounded-2xl shadow-xl max-w-sm w-full border border-slate-700 text-center">
-          <div className="w-14 h-14 bg-blue-600/20 rounded-full flex items-center justify-center mx-auto mb-5">
-            <span className="material-symbols-outlined text-blue-400 text-3xl">
-              storefront
-            </span>
-          </div>
+          <img
+            src="/mapscore_logo_final.svg"
+            alt="MapScore Logo"
+            className="w-32 h-auto mx-auto mb-4 drop-shadow-lg"
+          />
+
           <h1 className="text-2xl font-extrabold mb-2 text-white tracking-tight">
             MapScore
           </h1>
           <p className="text-slate-400 mb-8 text-sm">
             Understand and grow your local business visibility.
           </p>
+
           <div className="space-y-3">
             <a
               href="http://localhost:3000/auth/google"
@@ -549,7 +551,6 @@ export default function App() {
         </header>
 
         <div className="px-4 sm:px-6 md:px-10 py-6 flex-grow">
-          {/* TAB: SEARCH */}
           {activeTab === "search" && (
             <div className="max-w-2xl mx-auto flex flex-col justify-center min-h-[60vh] animate-in fade-in duration-300">
               <div className="mb-8 text-center">
